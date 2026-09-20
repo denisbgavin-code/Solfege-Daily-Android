@@ -42,6 +42,9 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      - name: Validate 238-lesson course
+        run: gradle :app:testDebugUnitTest --stacktrace
+
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
 
