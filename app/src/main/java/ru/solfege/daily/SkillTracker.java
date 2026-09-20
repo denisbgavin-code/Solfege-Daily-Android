@@ -2,6 +2,8 @@ package ru.solfege.daily;
 
 import android.content.SharedPreferences;
 
+import static ru.solfege.daily.SkillTracker.Skill.*;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
