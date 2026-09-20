@@ -457,7 +457,16 @@ public class MainActivity extends Activity {
 
             StaffView staff = new StaffView(this);
             staff.setNotes(lesson.melody);
+            staff.setShowLabels(false);
             visualHolder.addView(staff);
+
+            Button showNames = secondaryButton("Показать названия нот");
+            showNames.setOnClickListener(v -> {
+                staff.setShowLabels(true);
+                showNames.setText("Названия открыты");
+                showNames.setEnabled(false);
+            });
+            visualHolder.addView(showNames, margins(0, 4, 0, 0));
         } else {
             ContourView contour = new ContourView(this);
             contour.setNotes(lesson.melody);
