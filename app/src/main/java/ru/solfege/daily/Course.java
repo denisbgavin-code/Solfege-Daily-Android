@@ -145,7 +145,7 @@ public final class Course {
         String create = creativeFor(week, day, key);
         String rhythmLabel = rhythmLabel(rhythm, week);
         String review = reviewFor(safeId);
-        boolean showStaff = week >= 9 || week == 6 || week == 7 || week == 8;
+        boolean showStaff = week >= 9;
 
         return new Lesson(
                 safeId,
