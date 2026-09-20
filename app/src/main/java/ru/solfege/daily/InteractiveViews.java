@@ -49,11 +49,11 @@ class PianoView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        float w = getWidth() / 8f;
-        String[] names = {"до","ре","ми","фа","соль","ля","си","до"};
-        int[] whiteMidi = {60,62,64,65,67,69,71,72};
+        float w = getWidth() / 15f;
+        String[] names = {"до","ре","ми","фа","соль","ля","си","до","ре","ми","фа","соль","ля","си","до"};
+        int[] whiteMidi = {60,62,64,65,67,69,71,72,74,76,77,79,81,83,84};
 
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < 15; i++) {
             RectF r = new RectF(i * w, 0, (i + 1) * w, getHeight());
             Paint p = white;
             if (pressedMidi == whiteMidi[i]) {
@@ -65,8 +65,8 @@ class PianoView extends View {
             canvas.drawText(names[i], r.centerX(), getHeight() - dp(12), label);
         }
 
-        int[] blackAfterWhite = {0,1,3,4,5};
-        int[] blackMidi = {61,63,66,68,70};
+        int[] blackAfterWhite = {0,1,3,4,5,7,8,10,11,12};
+        int[] blackMidi = {61,63,66,68,70,73,75,78,80,82};
         float bw = w * 0.58f;
         float bh = getHeight() * 0.61f;
 
@@ -105,9 +105,9 @@ class PianoView extends View {
     }
 
     private int hitTest(float x, float y) {
-        float w = getWidth() / 8f;
-        int[] blackAfterWhite = {0,1,3,4,5};
-        int[] blackMidi = {61,63,66,68,70};
+        float w = getWidth() / 15f;
+        int[] blackAfterWhite = {0,1,3,4,5,7,8,10,11,12};
+        int[] blackMidi = {61,63,66,68,70,73,75,78,80,82};
         float bw = w * 0.58f;
         float bh = getHeight() * 0.61f;
 
@@ -118,8 +118,8 @@ class PianoView extends View {
             }
         }
 
-        int index = Math.max(0, Math.min(7, (int) (x / w)));
-        int[] whiteMidi = {60,62,64,65,67,69,71,72};
+        int index = Math.max(0, Math.min(14, (int) (x / w)));
+        int[] whiteMidi = {60,62,64,65,67,69,71,72,74,76,77,79,81,83,84};
         return whiteMidi[index];
     }
 
