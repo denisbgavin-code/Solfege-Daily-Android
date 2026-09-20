@@ -107,7 +107,9 @@ public final class PitchDetector {
                 if (hz < 65 || hz > 1100) continue;
 
                 double midi = 69.0 + 12.0 * log2(hz / 440.0);
-                double cents = (midi - targetMidi) * 100.0;
+                double pitchClassDelta = midi - targetMidi;
+                pitchClassDelta -= 12.0 * Math.rint(pitchClassDelta / 12.0);
+                double cents = pitchClassDelta * 100.0;
 
                 history[historyCount % history.length] = midi;
                 historyCount++;
@@ -126,7 +128,9 @@ public final class PitchDetector {
                     }
                     variance /= n;
 
-                    stable = variance < 0.05 && Math.abs(mean - targetMidi) < 0.55;
+                    double delta = mean - targetMidi;
+                    delta -= 12.0 * Math.rint(delta / 12.0);
+                    stable = variance < 0.05 && Math.abs(delta) < 0.55;
                 }
 
                 final boolean match = stable;
