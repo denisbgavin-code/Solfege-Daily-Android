@@ -41,6 +41,7 @@ public class MainActivity extends Activity {
     private int step = -1;
     private final boolean[] stepDone = new boolean[5];
     private int wrongAnswers = 0;
+    private Button navActionButton;
 
     private final List<Long> rhythmTaps = new ArrayList<>();
     private boolean rhythmRecording = false;
@@ -168,6 +169,7 @@ public class MainActivity extends Activity {
     }
 
     private void renderLesson() {
+        navActionButton = null;
         Course.Lesson lesson = Course.lesson(lessonId);
         boolean teacher = prefs.getBoolean("teacher", false);
 
@@ -254,6 +256,7 @@ public class MainActivity extends Activity {
             LinearLayout.LayoutParams nextP = weightedButtonParams(1f);
             nextP.setMargins(dp(8), 0, 0, 0);
             nav.addView(next, nextP);
+            navActionButton = next;
         } else {
             Button finish = primaryButton("Завершить миссию");
             finish.setEnabled(stepDone[4] || teacher);
@@ -261,6 +264,7 @@ public class MainActivity extends Activity {
             LinearLayout.LayoutParams finishP = weightedButtonParams(1f);
             finishP.setMargins(dp(8), 0, 0, 0);
             nav.addView(finish, finishP);
+            navActionButton = finish;
         }
         root.addView(nav);
 
@@ -306,7 +310,7 @@ public class MainActivity extends Activity {
                     status.setTextColor(GOOD);
                     stepDone[0] = true;
                     savePartial();
-                    renderLesson();
+                    unlockNavigation();
                 } else {
                     wrongAnswers++;
                     status.setText(wrongAnswers < 2
@@ -315,6 +319,8 @@ public class MainActivity extends Activity {
                     status.setTextColor(WARN);
                     if (wrongAnswers >= 2) {
                         stepDone[0] = true; // ребёнок не блокируется из-за ошибки
+                        savePartial();
+                        unlockNavigation();
                     }
                 }
             });
@@ -384,6 +390,7 @@ public class MainActivity extends Activity {
                 }
                 stepDone[1] = true;
                 savePartial();
+                unlockNavigation();
             }
         });
 
@@ -425,6 +432,7 @@ public class MainActivity extends Activity {
             status.setText("Готово. Ещё раз послушай мелодию и сравни только начало, направление и конец.");
             status.setTextColor(GOOD);
             savePartial();
+            unlockNavigation();
         });
         box.addView(sang, margins(0, 7, 0, 0));
     }
@@ -471,6 +479,7 @@ public class MainActivity extends Activity {
             if (nowVisible) {
                 stepDone[3] = true;
                 savePartial();
+                unlockNavigation();
             }
         });
         box.addView(reveal);
@@ -509,9 +518,13 @@ public class MainActivity extends Activity {
             status.setText("Миссия готова к завершению. Если хочется — исполни свой вариант ещё один раз одинаково.");
             status.setTextColor(GOOD);
             savePartial();
-            renderLesson();
+            unlockNavigation();
         });
         box.addView(ready, margins(0, 8, 0, 0));
+    }
+
+    private void unlockNavigation() {
+        if (navActionButton != null) navActionButton.setEnabled(true);
     }
 
     private void finishLesson() {
