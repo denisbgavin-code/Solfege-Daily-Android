@@ -9,6 +9,7 @@ import android.view.View;
 
 public class StaffView extends View {
     private Course.Note[] notes = new Course.Note[0];
+    private boolean showLabels = false;
     private final Paint staff = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint notePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint text = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -28,6 +29,11 @@ public class StaffView extends View {
 
     public void setNotes(Course.Note[] notes) {
         this.notes = notes == null ? new Course.Note[0] : notes;
+        invalidate();
+    }
+
+    public void setShowLabels(boolean showLabels) {
+        this.showLabels = showLabels;
         invalidate();
     }
 
@@ -97,7 +103,9 @@ public class StaffView extends View {
                 canvas.drawText(n.accidental, x - dp(10), y + dp(6), acc);
             }
 
-            canvas.drawText(n.label, x, bottomLine + dp(42), text);
+            if (showLabels) {
+                canvas.drawText(n.label, x, bottomLine + dp(42), text);
+            }
         }
     }
 
