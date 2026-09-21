@@ -541,12 +541,14 @@ private fun ChallengeRunner(
 
 @Composable
 private fun ChoiceRound(round:RoundSpec,audio:AudioEngine,answered:Set<String>,disabled:Boolean,onSelect:(String)->Unit) {
+    var heard by remember(round) { mutableStateOf(false) }
     Column(verticalArrangement=Arrangement.spacedBy(9.dp)) {
-        PlayButton(round,audio)
+        PlayButton(round,audio) { heard = true }
+        if(!heard) Text("Сначала прослушай пример — варианты откроются после него.",color=Muted,fontSize=13.sp)
         round.options.forEach { option ->
             val used=option.id in answered
             OutlinedButton(
-                onClick={onSelect(option.id)},enabled=!disabled&&!used,
+                onClick={onSelect(option.id)},enabled=heard&&!disabled&&!used,
                 modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(16.dp),
                 colors=ButtonDefaults.outlinedButtonColors(containerColor=if(used)Rose.copy(alpha=.07f) else Color.White)
             ) {
@@ -558,16 +560,16 @@ private fun ChoiceRound(round:RoundSpec,audio:AudioEngine,answered:Set<String>,d
 }
 
 @Composable
-private fun PlayButton(round:RoundSpec,audio:AudioEngine) {
+private fun PlayButton(round:RoundSpec,audio:AudioEngine,onPlayed:()->Unit={}) {
     var playing by remember { mutableStateOf(false) }
     Button(
         onClick={
             if(!playing) {
                 playing=true
                 when {
-                    round.audioA.isNotEmpty()->audio.playMidi(round.audioA.toIntArray()){playing=false}
-                    round.rhythmA.isNotEmpty()->audio.playRhythm(round.rhythmA.toDoubleArray(),round.meter){playing=false}
-                    else->playing=false
+                    round.audioA.isNotEmpty()->audio.playMidi(round.audioA.toIntArray()){playing=false;onPlayed()}
+                    round.rhythmA.isNotEmpty()->audio.playRhythm(round.rhythmA.toDoubleArray(),round.meter){playing=false;onPlayed()}
+                    else->{playing=false;onPlayed()}
                 }
             }
         },
