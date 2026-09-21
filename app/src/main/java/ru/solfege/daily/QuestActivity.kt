@@ -584,13 +584,15 @@ private fun PlayButton(round:RoundSpec,audio:AudioEngine,onPlayed:()->Unit={}) {
 @Composable
 private fun MelodyBuildRound(round:RoundSpec,audio:AudioEngine,disabled:Boolean,onCheck:(Double,Boolean)->Unit) {
     var entered by remember(round) { mutableStateOf(listOf<Int>()) }
+    var heard by remember(round) { mutableStateOf(false) }
     val target=round.targetMelody
     val palette=remember(target) {
         val lo=(target.minOrNull()?:60)-2; val hi=(target.maxOrNull()?:67)+2
         (lo..hi).filter{it in 55..84}.distinct()
     }
     Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
-        PlayButton(round,audio)
+        PlayButton(round,audio) { heard = true }
+        if(!heard) Text("Сначала прослушай фрагмент. После этого откроется ввод.",color=Muted,fontSize=13.sp)
         SurfaceCard {
             Text("Твой ответ",fontWeight=FontWeight.Bold); Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
@@ -606,8 +608,8 @@ private fun MelodyBuildRound(round:RoundSpec,audio:AudioEngine,disabled:Boolean,
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
             palette.forEach { midi ->
                 Button(
-                    onClick={if(!disabled&&entered.size<target.size){entered=entered+midi;audio.playHomeNote(midi,null)}},
-                    enabled=!disabled,contentPadding=PaddingValues(horizontal=12.dp,vertical=10.dp),shape=RoundedCornerShape(12.dp),
+                    onClick={if(heard&&!disabled&&entered.size<target.size){entered=entered+midi;audio.playHomeNote(midi,null)}},
+                    enabled=heard&&!disabled,contentPadding=PaddingValues(horizontal=12.dp,vertical=10.dp),shape=RoundedCornerShape(12.dp),
                     colors=ButtonDefaults.buttonColors(containerColor=if(isBlackKey(midi))Ink else Color.White,contentColor=if(isBlackKey(midi))Color.White else Ink)
                 ) { Text(noteNameUi(midi),fontSize=12.sp) }
             }
@@ -620,7 +622,7 @@ private fun MelodyBuildRound(round:RoundSpec,audio:AudioEngine,disabled:Boolean,
                     val score=if(target.isEmpty())0.0 else same.toDouble()/target.size
                     onCheck(score,entered==target)
                 },
-                enabled=!disabled&&entered.size==target.size,modifier=Modifier.weight(1f)
+                enabled=heard&&!disabled&&entered.size==target.size,modifier=Modifier.weight(1f)
             ){Text("Проверить")}
         }
     }
@@ -629,17 +631,19 @@ private fun MelodyBuildRound(round:RoundSpec,audio:AudioEngine,disabled:Boolean,
 @Composable
 private fun RhythmBuildRound(round:RoundSpec,audio:AudioEngine,disabled:Boolean,onCheck:(Double,Boolean)->Unit) {
     var entered by remember(round){mutableStateOf(listOf<Double>())}
+    var heard by remember(round){mutableStateOf(false)}
     val target=round.targetRhythm
     val palette=listOf(2.0,1.0,.5,.25).filter{p->target.any{abs(it-p)<.001}||p in listOf(1.0,.5)}
     Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
-        PlayButton(round,audio)
+        PlayButton(round,audio) { heard = true }
+        if(!heard) Text("Сначала прослушай ритм. После этого откроется конструктор.",color=Muted,fontSize=13.sp)
         SurfaceCard {
             Text("Твой ритм",fontWeight=FontWeight.Bold); Spacer(Modifier.height(8.dp))
             if(entered.isEmpty())Text("Пока пусто. Нажми длительности ниже.",color=Muted)
             else MiniRhythm(entered,Modifier.fillMaxWidth().height(54.dp))
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            palette.forEach { d -> Button(onClick={if(!disabled&&entered.size<target.size+2)entered=entered+d},enabled=!disabled,shape=RoundedCornerShape(14.dp)){Text(durationLabel(d),fontSize=17.sp)} }
+            palette.forEach { d -> Button(onClick={if(heard&&!disabled&&entered.size<target.size+2)entered=entered+d},enabled=heard&&!disabled,shape=RoundedCornerShape(14.dp)){Text(durationLabel(d),fontSize=17.sp)} }
         }
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick={if(entered.isNotEmpty())entered=entered.dropLast(1)},enabled=!disabled,modifier=Modifier.weight(1f)){Text("Убрать")}
@@ -650,7 +654,7 @@ private fun RhythmBuildRound(round:RoundSpec,audio:AudioEngine,disabled:Boolean,
                     val score=if(n==0)0.0 else same.toDouble()/n
                     onCheck(score,entered==target)
                 },
-                enabled=!disabled&&entered.isNotEmpty(),modifier=Modifier.weight(1f)
+                enabled=heard&&!disabled&&entered.isNotEmpty(),modifier=Modifier.weight(1f)
             ){Text("Проверить")}
         }
     }
