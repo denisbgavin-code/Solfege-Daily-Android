@@ -222,12 +222,20 @@ object ChallengeEngine {
             }
             guard++
         }
-        while (variants.size < 4) {
+        var filler = 0
+        while (variants.size < 4 && filler < 32) {
             val base = MutableList(correct.size.coerceAtLeast(2)) { 1.0 }
-            val index = (variants.size - 1).coerceAtMost(base.lastIndex)
-            base[index] = if (variants.size % 2 == 0) 0.5 else 2.0
+            val index = filler % base.size
+            base[index] = when (filler % 4) {
+                0 -> 0.25
+                1 -> 0.5
+                2 -> 1.5
+                else -> 2.0
+            }
             addIfUnique(base)
+            filler++
         }
+        check(variants.size >= 4) { "Unable to generate four distinct rhythm alternatives" }
 
         val selected = variants.take(if (difficulty == 0) 3 else 4).shuffled(rng)
         val correctKey = rhythmKey(correct)
