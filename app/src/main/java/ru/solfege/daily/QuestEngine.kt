@@ -203,7 +203,7 @@ object MissionFactory {
             val reviewSkill = skillForWeek(reviewWeek)
             val reviewDifficulty = difficulty(store, reviewSkill)
             earRound(reviewWeek, day, 3, random, reviewDifficulty, reviewSkill)
-                .copy(prompt = "Вспомни прошлый материал: " + earRound(reviewWeek, day, 3, random, reviewDifficulty, reviewSkill).prompt)
+                .let { item -> item.copy(prompt = "Вспомни прошлый материал: " + item.prompt) }
         } else {
             earRound(week, day, 3, random, d, skill)
         }
