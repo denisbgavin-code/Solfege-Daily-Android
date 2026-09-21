@@ -4,6 +4,16 @@ import android.content.Context
 import android.content.SharedPreferences
 import java.time.LocalDate
 
+object MissionProgressRules {
+    fun completedAfter(currentCompleted: Int, missionId: Int, reviewMode: Boolean = false, teacherMode: Boolean = false): Int {
+        if (reviewMode || teacherMode) return currentCompleted
+        return if (missionId == currentCompleted + 1) missionId else currentCompleted
+    }
+
+    fun isUnlocked(currentCompleted: Int, missionId: Int, teacherMode: Boolean = false): Boolean =
+        teacherMode || missionId <= currentCompleted + 1
+}
+
 class ProgressRepository(context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("solfege_production_v4", Context.MODE_PRIVATE)
@@ -14,7 +24,7 @@ class ProgressRepository(context: Context) {
 
     fun isUnlocked(missionId: Int): Boolean {
         val id = missionId.coerceIn(1, Course.TOTAL_LESSONS)
-        return id <= completedMission() + 1
+        return MissionProgressRules.isUnlocked(completedMission(), id)
     }
 
     fun stars(missionId: Int): Int =
@@ -84,8 +94,9 @@ class ProgressRepository(context: Context) {
             .putInt("stars_" + summary.missionId, newStars)
 
         val completed = completedMission()
-        if (summary.missionId == completed + 1) {
-            editor.putInt("completed_mission", summary.missionId)
+        val nextCompleted = MissionProgressRules.completedAfter(completed, summary.missionId)
+        if (nextCompleted != completed) {
+            editor.putInt("completed_mission", nextCompleted)
         }
 
         updateStreak(editor)
