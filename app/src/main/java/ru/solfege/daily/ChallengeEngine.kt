@@ -368,17 +368,36 @@ object ChallengeEngine {
             lesson.week >= 3 -> listOf(2.0, 1.0, 0.5)
             else -> listOf(1.0, 0.5)
         }
+        val pattern = when (beats.toInt()) {
+            2 -> when ((missionId + lesson.day) % 3) {
+                0 -> listOf(1.0, 1.0)
+                1 -> listOf(0.5, 0.5, 1.0)
+                else -> listOf(1.0, 0.5, 0.5)
+            }
+            3 -> when ((missionId + lesson.day) % 3) {
+                0 -> listOf(1.0, 1.0, 1.0)
+                1 -> listOf(2.0, 1.0)
+                else -> listOf(0.5, 0.5, 2.0)
+            }
+            else -> when ((missionId + lesson.day) % 4) {
+                0 -> listOf(1.0, 1.0, 1.0, 1.0)
+                1 -> listOf(2.0, 1.0, 1.0)
+                2 -> listOf(1.0, 0.5, 0.5, 2.0)
+                else -> if (lesson.week >= 22) listOf(1.0, 0.25, 0.25, 0.25, 0.25, 2.0) else listOf(0.5, 0.5, 1.0, 2.0)
+            }
+        }
         return Challenge(
             id = "placeholder",
             missionId = missionId,
             type = GameType.MEASURE_BUILD,
             skill = SkillDomain.WRITING,
-            title = "Собери такт",
-            instruction = "Собери ровно " + formatBeats(beats) + " долей. Приложение не подскажет правильность, пока ты не нажмёшь «Проверить».",
+            title = "Собери услышанный такт",
+            instruction = "Послушай ритм и собери его из длительностей. Сначала закончи весь ответ, потом нажми «Проверить».",
+            audioRhythm = pattern,
             targetRhythmBeats = beats,
             allowedDurations = allowed,
-            hint = "Сначала положи крупные длительности, затем заполни оставшееся место.",
-            explanation = "В полном такте сумма длительностей должна точно совпасть с размером.",
+            hint = "Сначала проверь, сколько долей занимает весь такт. Потом сравни порядок длинных и коротких звуков.",
+            explanation = "Совпасть должна не только сумма длительностей, но и их порядок.",
             difficulty = difficulty
         )
     }
