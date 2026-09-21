@@ -303,13 +303,15 @@ private fun TrainingScreen(store: ProgressStore, onStart: (Int) -> Unit) {
         item { SectionTitle("Карта навыков", "Это внутренний адаптивный профиль, не школьные оценки") }
         items(SkillTag.entries) { skill ->
             val state = store.skillState(skill)
-            SurfaceCard {
+            SurfaceCard(Modifier.clickable(enabled = completed > 0) { onStart(smartLessonForSkill(skill, completed)) }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(skillName(skill), fontWeight = FontWeight.SemiBold)
                         Text(if (state.attempts == 0) "ещё нет данных" else state.attempts.toString() + " попыток", color = Muted, fontSize = 12.sp)
                     }
                     Text((state.score * 100).roundToInt().toString() + "%", fontWeight = FontWeight.Bold, color = masteryColor(state.score))
+                    Spacer(Modifier.width(7.dp))
+                    Icon(Icons.Default.ChevronRight, null, tint = Muted)
                 }
                 Spacer(Modifier.height(8.dp))
                 LinearProgressIndicator(
