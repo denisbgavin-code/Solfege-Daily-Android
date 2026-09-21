@@ -450,7 +450,7 @@ private fun ChallengeRunner(
     val round = challenge.rounds[roundIndex]
 
     fun finishRound(result: Double, wasCorrect: Boolean, message: String) {
-        store.recordSkill(challenge.skill, result, missionId)
+        store.recordSkill(round.skill, result, missionId)
         if (wasCorrect) correct++
         feedback = message
         feedbackGood = wasCorrect
