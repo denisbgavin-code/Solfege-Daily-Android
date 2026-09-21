@@ -23,6 +23,7 @@ data class RoundSpec(
     val audioB: List<Int> = emptyList(),
     val rhythmA: List<Double> = emptyList(),
     val rhythmB: List<Double> = emptyList(),
+    val meter: Int = 0,
     val options: List<AnswerOption> = emptyList(),
     val correctOptionId: String? = null,
     val targetMelody: List<Int> = emptyList(),
@@ -220,7 +221,7 @@ object MissionFactory {
             val meter = when(week){5,12->3;20->4;else->2}
             return RoundSpec(
                 "Через сколько долей возвращается сильная?","Слушай сильный щелчок и тихие после него.",
-                rhythmA=List(meter*2){1.0},
+                rhythmA=List(meter*2){1.0},meter=meter,
                 options=listOf(2,3,4).map{AnswerOption("m$it","$it доли")}.shuffled(random),
                 correctOptionId="m$meter",
                 hint="Считай от одного сильного щелчка до следующего.",
