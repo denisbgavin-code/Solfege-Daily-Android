@@ -393,7 +393,9 @@ object MissionFactory {
         val out=source.toMutableList()
         if(variant==1){val tmp=out[0];out[0]=out[out.lastIndex];out[out.lastIndex]=tmp}
         else{val i=min(1,out.lastIndex);out[i]=when(out[i]){1.0->0.5;0.5->1.0;0.25->0.5;3.0->1.0;else->1.0}}
-        if(out==source)out.reverse()
+        if(out==source){
+            out[0]=when(out[0]){1.0->0.5;0.5->1.0;0.25->0.5;3.0->1.0;else->0.5}
+        }
         return out
     }
 
