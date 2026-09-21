@@ -261,7 +261,7 @@ object MissionFactory {
             val active=when(week){26->intervals.take(2);27->intervals.take(3);else->intervals}
             val chosen=active[(idx+day)%active.size]
             return RoundSpec(
-                "Какое расстояние прозвучало?","Послушай два звука подряд.",audioA=listOf(60,60+chosen.third),
+                "Какое расстояние между двумя последними звуками?","Сначала услышишь короткую опору До–Ми–Соль, затем два звука для ответа.",audioA=listOf(60,64,67,60,60+chosen.third),
                 options=active.map{AnswerOption(it.first,it.second)}.shuffled(random),correctOptionId=chosen.first,
                 hint="Сравни ширину расстояния: секунда самая узкая, октава — тот же звук выше.",
                 explanation="Это " + chosen.second + ".",skill=skill,difficulty=d
