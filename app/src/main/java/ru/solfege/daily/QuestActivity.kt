@@ -614,6 +614,16 @@ private fun MelodyBuildRound(round:RoundSpec,audio:AudioEngine,disabled:Boolean,
                 ) { Text(noteNameUi(midi),fontSize=12.sp) }
             }
         }
+        OutlinedButton(
+            onClick={if(entered.isNotEmpty())audio.playMidi(entered.toIntArray(),null)},
+            enabled=heard&&!disabled&&entered.isNotEmpty(),
+            modifier=Modifier.fillMaxWidth()
+        ){Icon(Icons.Default.VolumeUp,null);Spacer(Modifier.width(6.dp));Text("Слушать мой ответ")}
+        OutlinedButton(
+            onClick={if(entered.isNotEmpty())audio.playRhythm(entered.toDoubleArray(),0,null)},
+            enabled=heard&&!disabled&&entered.isNotEmpty(),
+            modifier=Modifier.fillMaxWidth()
+        ){Icon(Icons.Default.VolumeUp,null);Spacer(Modifier.width(6.dp));Text("Слушать мой ритм")}
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick={if(entered.isNotEmpty())entered=entered.dropLast(1)},enabled=!disabled,modifier=Modifier.weight(1f)){Text("Убрать")}
             Button(
