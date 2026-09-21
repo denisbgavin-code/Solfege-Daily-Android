@@ -181,7 +181,7 @@ private fun HomeScreen(store: ProgressStore, refresh: Int, onStart: (Int) -> Uni
 
 @Composable
 private fun HeroMissionCard(mission: MissionSpec, completed: Int, stars: Int, onStart: (Int) -> Unit) {
-    val gradient = Brush.linearGradient(listOf(Color(0xFF3949C6), Color(0xFF7757D8), Color(0xFF41A3D1)))
+    val gradient = Brush.linearGradient(worldGradient(mission.worldIndex))
     Card(shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent)) {
         Column(Modifier.background(gradient).padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -412,7 +412,7 @@ private fun MissionScreen(
 @Composable
 private fun MissionHeader(mission: MissionSpec, challengeIndex: Int, onExit: () -> Unit) {
     Column(
-        Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xFF3949C6), Color(0xFF7857D9))))
+        Modifier.fillMaxWidth().background(Brush.horizontalGradient(worldGradient(mission.worldIndex)))
             .padding(start=12.dp,end=16.dp,top=10.dp,bottom=13.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -824,3 +824,13 @@ private fun noteNameUi(midi:Int):String{
 }
 private fun isBlackKey(midi:Int)=Math.floorMod(midi,12) in setOf(1,3,6,8,10)
 private fun durationLabel(d:Double)=when{d>=1.9->"𝅗𝅥 2";d>=.9->"♩ 1";d>=.49->"♪ ½";else->"♬ ¼"}
+
+private fun worldGradient(index:Int):List<Color> = when(index){
+    0->listOf(Color(0xFF236B57),Color(0xFF45A56E),Color(0xFF7BC985))
+    1->listOf(Color(0xFF3D4FC4),Color(0xFF6A5CDB),Color(0xFF57A2DB))
+    2->listOf(Color(0xFF4C536A),Color(0xFF536DA8),Color(0xFF43A6D6))
+    3->listOf(Color(0xFF137A91),Color(0xFF2FA8A0),Color(0xFF64C8A8))
+    4->listOf(Color(0xFF8A532B),Color(0xFFC47A35),Color(0xFFE6A84C))
+    5->listOf(Color(0xFF302A74),Color(0xFF6641A6),Color(0xFFAA5CC4))
+    else->listOf(Color(0xFF6B304B),Color(0xFF9D466F),Color(0xFFD05C78))
+}
