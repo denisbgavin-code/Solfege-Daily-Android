@@ -551,7 +551,7 @@ private fun PlayButton(round:RoundSpec,audio:AudioEngine) {
                 playing=true
                 when {
                     round.audioA.isNotEmpty()->audio.playMidi(round.audioA.toIntArray()){playing=false}
-                    round.rhythmA.isNotEmpty()->audio.playRhythm(round.rhythmA.toDoubleArray(),0){playing=false}
+                    round.rhythmA.isNotEmpty()->audio.playRhythm(round.rhythmA.toDoubleArray(),round.meter){playing=false}
                     else->playing=false
                 }
             }
