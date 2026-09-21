@@ -87,8 +87,15 @@ private fun QuestApp(audio: AudioEngine, store: ProgressStore, pitchDetector: Pi
     var screen by remember { mutableStateOf(Screen.HOME) }
     var selectedLesson by remember { mutableIntStateOf(store.currentLesson()) }
     var refresh by remember { mutableIntStateOf(0) }
+    var practiceMode by remember { mutableStateOf(false) }
 
     val openMission: (Int) -> Unit = {
+        practiceMode = false
+        selectedLesson = it
+        screen = Screen.MISSION
+    }
+    val openPractice: (Int) -> Unit = {
+        practiceMode = true
         selectedLesson = it
         screen = Screen.MISSION
     }
@@ -110,10 +117,11 @@ private fun QuestApp(audio: AudioEngine, store: ProgressStore, pitchDetector: Pi
             when (screen) {
                 Screen.HOME -> HomeScreen(store, refresh, openMission, { screen = Screen.MAP }, { screen = Screen.TRAIN })
                 Screen.MAP -> MapScreen(store, refresh, openMission)
-                Screen.TRAIN -> TrainingScreen(store, openMission)
+                Screen.TRAIN -> TrainingScreen(store, openPractice)
                 Screen.PROGRESS -> ProgressScreen(store, refresh)
                 Screen.MISSION -> MissionScreen(
                     MissionFactory.create(selectedLesson, store), audio, store, pitchDetector,
+                    practiceMode = practiceMode,
                     onExit = { screen = Screen.HOME },
                     onMissionComplete = { refresh++; screen = Screen.HOME }
                 )
@@ -358,6 +366,7 @@ private fun MissionScreen(
     audio: AudioEngine,
     store: ProgressStore,
     pitchDetector: PitchDetector,
+    practiceMode: Boolean,
     onExit: () -> Unit,
     onMissionComplete: () -> Unit
 ) {
@@ -366,9 +375,11 @@ private fun MissionScreen(
     var finished by remember { mutableStateOf(false) }
 
     if (finished) {
-        MissionCompleteScreen(mission, missionStars) {
-            store.completeLesson(mission.id, missionStars)
-            store.clearCursor()
+        MissionCompleteScreen(mission, missionStars, practiceMode) {
+            if (!practiceMode) {
+                store.completeLesson(mission.id, missionStars)
+                store.clearCursor()
+            }
             onMissionComplete()
         }
         return
@@ -704,21 +715,21 @@ private fun FeedbackCard(message:String,good:Boolean,final:Boolean) {
 }
 
 @Composable
-private fun MissionCompleteScreen(mission:MissionSpec,stars:Int,onContinue:()->Unit) {
+private fun MissionCompleteScreen(mission:MissionSpec,stars:Int,practiceMode:Boolean,onContinue:()->Unit) {
     Box(
         Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF3447BC),Color(0xFF7C56D9)))),
         contentAlignment=Alignment.Center
     ) {
         Column(Modifier.padding(26.dp),horizontalAlignment=Alignment.CenterHorizontally) {
             Text("✨",fontSize=68.sp);Spacer(Modifier.height(8.dp))
-            Text("Миссия выполнена",color=Color.White,fontSize=28.sp,fontWeight=FontWeight.ExtraBold)
+            Text(if(practiceMode)"Тренировка завершена" else "Миссия выполнена",color=Color.White,fontSize=28.sp,fontWeight=FontWeight.ExtraBold)
             Text("День "+mission.day+" • "+mission.title,color=Color.White.copy(alpha=.80f),textAlign=TextAlign.Center)
             Spacer(Modifier.height(18.dp))
             Surface(shape=RoundedCornerShape(20.dp),color=Color.White.copy(alpha=.13f)){Text("★ +"+stars,Modifier.padding(horizontal=22.dp,vertical=12.dp),color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)}
             Spacer(Modifier.height(20.dp))
-            Text("Следующий день откроется сейчас. Ошибки не блокируют маршрут: они меняют будущие повторения и сложность.",color=Color.White.copy(alpha=.88f),textAlign=TextAlign.Center,lineHeight=21.sp)
+            Text(if(practiceMode)"Результаты уже учтены в карте навыков. Основной маршрут не изменён." else "Следующий день откроется сейчас. Ошибки не блокируют маршрут: они меняют будущие повторения и сложность.",color=Color.White.copy(alpha=.88f),textAlign=TextAlign.Center,lineHeight=21.sp)
             Spacer(Modifier.height(22.dp))
-            Button(onClick=onContinue,colors=ButtonDefaults.buttonColors(containerColor=Color.White,contentColor=Blue),modifier=Modifier.fillMaxWidth().height(55.dp),shape=RoundedCornerShape(18.dp)){Text("Открыть следующий день",fontWeight=FontWeight.Bold)}
+            Button(onClick=onContinue,colors=ButtonDefaults.buttonColors(containerColor=Color.White,contentColor=Blue),modifier=Modifier.fillMaxWidth().height(55.dp),shape=RoundedCornerShape(18.dp)){Text(if(practiceMode)"Вернуться домой" else "Открыть следующий день",fontWeight=FontWeight.Bold)}
         }
     }
 }
