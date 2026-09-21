@@ -196,8 +196,19 @@ object MissionFactory {
             in 25..30 -> SkillTag.INTERVALS; else -> SkillTag.KEYS
         }
         val d = difficulty(store, skill)
-        val rounds = (0 until 4).map { earRound(week, day, it, random, d, skill) }
-        return ChallengeSpec("ear-$lessonId","Ухо-детектив","Сначала слушай, потом выбирай.",ChallengeType.LISTEN_CHOICE,rounds,3,2,skill)
+        val currentRounds = (0 until 3).map { earRound(week, day, it, random, d, skill) }
+        val reviewRound = if (week > 1) {
+            val lag = when ((week + day) % 3) { 0 -> 1; 1 -> 3; else -> 6 }
+            val reviewWeek = (week - lag).coerceAtLeast(1)
+            val reviewSkill = skillForWeek(reviewWeek)
+            val reviewDifficulty = difficulty(store, reviewSkill)
+            earRound(reviewWeek, day, 3, random, reviewDifficulty, reviewSkill)
+                .copy(prompt = "Вспомни прошлый материал: " + earRound(reviewWeek, day, 3, random, reviewDifficulty, reviewSkill).prompt)
+        } else {
+            earRound(week, day, 3, random, d, skill)
+        }
+        val rounds = currentRounds + reviewRound
+        return ChallengeSpec("ear-$lessonId","Ухо-детектив","Три новых вопроса + один возврат к прошлому материалу.",ChallengeType.LISTEN_CHOICE,rounds,3,2,skill)
     }
 
     private fun earRound(week: Int, day: Int, idx: Int, random: Random, d: Int, skill: SkillTag): RoundSpec {
@@ -274,6 +285,17 @@ object MissionFactory {
             correctOptionId="steps",hint="Если каждый следующий звук совсем рядом, это поступенное движение.",
             explanation="Здесь мелодия движется по соседним ступеням.",skill=skill,difficulty=d
         )
+    }
+
+    private fun skillForWeek(week: Int): SkillTag = when (week) {
+        in 1..2 -> SkillTag.PITCH
+        in 3..5 -> SkillTag.PULSE
+        in 6..10 -> SkillTag.TONALITY
+        in 11..15 -> SkillTag.RHYTHM
+        in 16..20 -> SkillTag.KEYS
+        in 21..24 -> SkillTag.RHYTHM
+        in 25..30 -> SkillTag.INTERVALS
+        else -> SkillTag.KEYS
     }
 
     private fun makeRhythmChallenge(lessonId:Int, week:Int, day:Int, random:Random, store:ProgressStore):ChallengeSpec{
