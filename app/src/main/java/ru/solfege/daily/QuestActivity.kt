@@ -392,10 +392,11 @@ private fun MissionScreen(
             store = store,
             pitchDetector = pitchDetector,
             onComplete = { stars ->
-                missionStars += stars
+                val totalStars = missionStars + stars
+                missionStars = totalStars
                 if (challengeIndex >= mission.challenges.lastIndex) {
                     if (!practiceMode) {
-                        store.completeLesson(mission.id, missionStars + stars)
+                        store.completeLesson(mission.id, totalStars)
                         store.clearCursor()
                     }
                     finished = true
