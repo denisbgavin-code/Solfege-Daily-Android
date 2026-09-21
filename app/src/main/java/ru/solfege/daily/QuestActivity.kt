@@ -378,10 +378,6 @@ private fun MissionScreen(
 
     if (finished) {
         MissionCompleteScreen(mission, missionStars, practiceMode) {
-            if (!practiceMode) {
-                store.completeLesson(mission.id, missionStars)
-                store.clearCursor()
-            }
             onMissionComplete()
         }
         return
@@ -397,8 +393,13 @@ private fun MissionScreen(
             pitchDetector = pitchDetector,
             onComplete = { stars ->
                 missionStars += stars
-                if (challengeIndex >= mission.challenges.lastIndex) finished = true
-                else {
+                if (challengeIndex >= mission.challenges.lastIndex) {
+                    if (!practiceMode) {
+                        store.completeLesson(mission.id, missionStars + stars)
+                        store.clearCursor()
+                    }
+                    finished = true
+                } else {
                     challengeIndex++
                     store.saveMissionCursor(mission.id, challengeIndex)
                 }
