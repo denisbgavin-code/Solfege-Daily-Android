@@ -257,10 +257,7 @@ private fun MapScreen(store: ProgressStore, refresh: Int, onOpen: (Int) -> Unit)
                 val first = (week - 1) * 7 + 1
                 val weekDone = (completed - first + 1).coerceIn(0, 7)
                 val unlocked = store.isUnlocked(first)
-                SurfaceCard(Modifier.clickable(enabled = unlocked) {
-                    val target = if (completed < first) first else minOf(first + 6, completed + 1)
-                    onOpen(target)
-                }) {
+                SurfaceCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             Modifier.size(46.dp).clip(CircleShape).background(if (weekDone == 7) Green.copy(alpha=.14f) else if (unlocked) Blue.copy(alpha=.12f) else Color(0xFFE9EBF1)),
@@ -273,21 +270,54 @@ private fun MapScreen(store: ProgressStore, refresh: Int, onOpen: (Int) -> Unit)
                         Column(Modifier.weight(1f)) {
                             Text(Curriculum.weekTitles[week - 1], fontWeight = FontWeight.Bold)
                             Text(weekDone.toString() + " из 7 дней", color = Muted, fontSize = 13.sp)
-                            Spacer(Modifier.height(7.dp))
-                            LinearProgressIndicator(
-                                progress = { weekDone / 7f },
-                                modifier = Modifier.fillMaxWidth().height(5.dp).clip(CircleShape),
-                                color = if (weekDone == 7) Green else Blue,
-                                trackColor = Color(0xFFE8EAF0)
-                            )
                         }
-                        Spacer(Modifier.width(8.dp))
-                        Icon(if (unlocked) Icons.Default.ChevronRight else Icons.Default.Lock, null, tint = Muted)
                     }
+                    Spacer(Modifier.height(12.dp))
+                    DayNodeRow(first, completed, onOpen)
                 }
             }
         }
         item { Spacer(Modifier.height(70.dp)) }
+    }
+}
+
+@Composable
+private fun DayNodeRow(firstLesson:Int,completed:Int,onOpen:(Int)->Unit) {
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement=Arrangement.SpaceBetween,
+        verticalAlignment=Alignment.CenterVertically
+    ) {
+        (0..6).forEach { offset ->
+            val lesson=firstLesson+offset
+            val isDone=lesson<=completed
+            val isCurrent=lesson==completed+1
+            val isUnlocked=lesson<=completed+1
+            val bg=when {
+                isDone->Green
+                isCurrent->Blue
+                else->Color(0xFFE6E8EF)
+            }
+            Column(horizontalAlignment=Alignment.CenterHorizontally) {
+                Box(
+                    Modifier
+                        .size(if(isCurrent)40.dp else 36.dp)
+                        .clip(CircleShape)
+                        .background(bg)
+                        .clickable(enabled=isUnlocked){onOpen(lesson)},
+                    contentAlignment=Alignment.Center
+                ) {
+                    when {
+                        isDone->Icon(Icons.Default.Check,null,tint=Color.White,modifier=Modifier.size(18.dp))
+                        !isUnlocked->Icon(Icons.Default.Lock,null,tint=Muted,modifier=Modifier.size(15.dp))
+                        offset==6->Icon(Icons.Default.EmojiEvents,null,tint=Color.White,modifier=Modifier.size(18.dp))
+                        else->Text((offset+1).toString(),color=Color.White,fontWeight=FontWeight.Bold,fontSize=13.sp)
+                    }
+                }
+                Spacer(Modifier.height(4.dp))
+                Text(if(offset==6)"итог" else (offset+1).toString(),fontSize=10.sp,color=Muted)
+            }
+        }
     }
 }
 
