@@ -90,7 +90,7 @@ private fun QuestApp(audio: AudioEngine, store: ProgressStore, pitchDetector: Pi
     var practiceMode by remember { mutableStateOf(false) }
 
     val openMission: (Int) -> Unit = {
-        practiceMode = false
+        practiceMode = it <= store.completedLesson
         selectedLesson = it
         screen = Screen.MISSION
     }
@@ -389,8 +389,12 @@ private fun MissionScreen(
     onExit: () -> Unit,
     onMissionComplete: () -> Unit
 ) {
-    var challengeIndex by remember(mission.id) { mutableIntStateOf(store.missionCursor(mission.id).coerceIn(0, 5)) }
-    var missionStars by remember(mission.id) { mutableIntStateOf(0) }
+    var challengeIndex by remember(mission.id, practiceMode) {
+        mutableIntStateOf(if (practiceMode) 0 else store.missionCursor(mission.id).coerceIn(0, 5))
+    }
+    var missionStars by remember(mission.id, practiceMode) {
+        mutableIntStateOf(if (practiceMode) 0 else store.missionStars(mission.id))
+    }
     var finished by remember { mutableStateOf(false) }
 
     if (finished) {
@@ -419,7 +423,7 @@ private fun MissionScreen(
                     finished = true
                 } else {
                     challengeIndex++
-                    if (!practiceMode) store.saveMissionCursor(mission.id, challengeIndex)
+                    if (!practiceMode) store.saveMissionCursor(mission.id, challengeIndex, totalStars)
                 }
             }
         )
@@ -852,7 +856,6 @@ private fun StaffSnippet(notes:List<Int>,preferFlats:Boolean,modifier:Modifier=M
             val y = top + line * gap
             drawLine(Color(0xFF697082), Offset(4f,y), Offset(size.width-4f,y), strokeWidth=1.5f)
         }
-        val minMidi = 60
         val stepX = size.width / (notes.size + 1)
         notes.forEachIndexed { index, midi ->
             val diatonic = diatonicStaffStep(midi,preferFlats)
@@ -891,8 +894,8 @@ private fun diatonicStaffStep(midi:Int,preferFlats:Boolean):Int {
         when(pc){0,1->0;2,3->1;4->2;5,6->3;7,8->4;9,10->5;else->6}
     }
     val absolute=octave*7+letterIndex
-    val c4Absolute=4*7
-    return absolute-c4Absolute
+    val e4Absolute=4*7+2
+    return absolute-e4Absolute
 }
 
 private fun challengeIconByType(type:ChallengeType)=when(type){
