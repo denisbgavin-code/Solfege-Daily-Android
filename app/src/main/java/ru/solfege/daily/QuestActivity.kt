@@ -774,7 +774,7 @@ private fun SingingRound(round:RoundSpec,audio:AudioEngine,detector:PitchDetecto
     }
     LaunchedEffect(listening) {
         if(!listening){detector.stop();return@LaunchedEffect}
-        detector.start(target,object:PitchDetector.Listener{
+        detector.start(context,target,object:PitchDetector.Listener{
             override fun onLevel(rms:Double){}
             override fun onPitch(hz:Double,midi:Double,centsFromTarget:Double,stableMatch:Boolean){
                 val delta=centsFromTarget.roundToInt()
