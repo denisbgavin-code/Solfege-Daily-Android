@@ -358,10 +358,10 @@ object MissionFactory {
                     val degreeIndex = (day + idx) % degrees.size
                     val midi = 60 + degrees[degreeIndex]
                     val degreeNumber = degreeIndex + 1
-                    val candidates = listOf(1,2,3,4,5)
-                        .filter { d == 2 || abs(it - degreeNumber) <= 2 }
-                        .distinct()
-                        .take(if(d==0) 2 else if(d==1) 3 else 5)
+                    val pool = listOf(1,2,3,4,5).filter { it != degreeNumber }
+                    val distractors = pool.sortedBy { abs(it - degreeNumber) }
+                        .take(if(d==0) 1 else if(d==1) 2 else 4)
+                    val candidates = (listOf(degreeNumber) + distractors).distinct()
                     RoundSpec(
                         prompt="Какая ступень прозвучала после опоры До–Ми–Соль?",
                         instruction="Сначала услышишь ладовую опору, затем один звук для ответа.",
