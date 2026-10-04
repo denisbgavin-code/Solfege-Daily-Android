@@ -149,7 +149,14 @@ private fun HomeScreen(store: ProgressStore, refresh: Int, onStart: (Int) -> Uni
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 QuickCard(Modifier.weight(1f), Icons.Default.Map, "Маршрут", "34 недели", Cyan, onMap)
-                QuickCard(Modifier.weight(1f), Icons.Default.AutoAwesome, "Умная тренировка", skillName(store.weakestSkill()), Violet, onTrain)
+                QuickCard(
+                    Modifier.weight(1f),
+                    Icons.Default.AutoAwesome,
+                    "Умная тренировка",
+                    if (store.hasAnySkillData()) skillName(store.weakestSkill()) else "после первой миссии",
+                    Violet,
+                    onTrain
+                )
             }
         }
         item {
@@ -277,6 +284,7 @@ private fun MapScreen(store: ProgressStore, refresh: Int, onOpen: (Int) -> Unit)
 
 @Composable
 private fun TrainingScreen(store: ProgressStore, onStart: (Int) -> Unit) {
+    val hasData = store.hasAnySkillData()
     val weak = store.weakestSkill()
     val completed = store.completedLesson
     val suggested = smartLessonForSkill(weak, completed)
@@ -291,8 +299,17 @@ private fun TrainingScreen(store: ProgressStore, onStart: (Int) -> Unit) {
                 Column(Modifier.padding(18.dp)) {
                     Icon(Icons.Default.AutoAwesome, null, tint = Violet, modifier = Modifier.size(34.dp))
                     Spacer(Modifier.height(10.dp))
-                    Text("Сейчас полезнее: " + skillName(weak), fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text("Повторяем уже открытый материал, где этот навык нужен в музыкальной задаче.", color = Muted, modifier = Modifier.padding(top = 6.dp))
+                    Text(
+                        if (hasData) "Сейчас полезнее: " + skillName(weak) else "Сначала нужна первая миссия",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        if (hasData) "Повторяем уже открытый материал, где этот навык нужен в музыкальной задаче."
+                        else "После нескольких ответов приложение сможет выбирать повторение по реальным попыткам, а не по догадке.",
+                        color = Muted,
+                        modifier = Modifier.padding(top = 6.dp)
+                    )
                     Spacer(Modifier.height(12.dp))
                     Button(onClick = { if (completed > 0) onStart(suggested) }, enabled = completed > 0, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
                         Text("Запустить тренировочную миссию")
@@ -402,7 +419,7 @@ private fun MissionScreen(
                     finished = true
                 } else {
                     challengeIndex++
-                    store.saveMissionCursor(mission.id, challengeIndex)
+                    if (!practiceMode) store.saveMissionCursor(mission.id, challengeIndex)
                 }
             }
         )
@@ -515,10 +532,28 @@ private fun ChallengeRunner(
                         }
                     }
                 ChallengeType.MELODY_BUILD -> MelodyBuildRound(round,audio,roundFinished) { score,exact ->
-                    finishRound(score,exact,if(exact)"Мелодия собрана точно." else "Есть отличия. "+round.hint)
+                    if (exact) {
+                        finishRound(1.0,true,"Мелодия собрана точно.")
+                    } else {
+                        wrong++
+                        if (wrong >= 2) finishRound(score.coerceAtMost(.55),false,"Сравни с эталоном. "+round.hint)
+                        else {
+                            feedback="Пока не совпало. Верно примерно "+(score*100).roundToInt()+"% позиций. "+round.hint
+                            feedbackGood=false
+                        }
+                    }
                 }
                 ChallengeType.RHYTHM_BUILD -> RhythmBuildRound(round,audio,roundFinished) { score,exact ->
-                    finishRound(score,exact,if(exact)"Ритм собран точно." else "Есть отличия. "+round.hint)
+                    if (exact) {
+                        finishRound(1.0,true,"Ритм собран точно.")
+                    } else {
+                        wrong++
+                        if (wrong >= 2) finishRound(score.coerceAtMost(.55),false,"Сравни с эталоном. "+round.hint)
+                        else {
+                            feedback="Пока не совпало. Верно примерно "+(score*100).roundToInt()+"% элементов. "+round.hint
+                            feedbackGood=false
+                        }
+                    }
                 }
                 ChallengeType.SINGING -> SingingRound(round,audio,pitchDetector,roundFinished) { score ->
                     finishRound(score,score>=.7,if(score>=.7)"Фраза выполнена." else "Попытка засчитана с поддержкой.")
@@ -552,7 +587,14 @@ private fun ChoiceRound(round:RoundSpec,audio:AudioEngine,answered:Set<String>,d
                 modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(16.dp),
                 colors=ButtonDefaults.outlinedButtonColors(containerColor=if(used)Rose.copy(alpha=.07f) else Color.White)
             ) {
-                if(option.rhythm.isNotEmpty()) { MiniRhythm(option.rhythm,Modifier.width(105.dp).height(36.dp)); Spacer(Modifier.width(9.dp)) }
+                if(option.rhythm.isNotEmpty()) {
+                    MiniRhythm(option.rhythm,Modifier.width(105.dp).height(36.dp))
+                    Spacer(Modifier.width(9.dp))
+                }
+                if(option.payload.isNotEmpty() && (round.skill == SkillTag.READING || round.skill == SkillTag.KEYS)) {
+                    StaffSnippet(option.payload, round.preferFlats, Modifier.width(100.dp).height(46.dp))
+                    Spacer(Modifier.width(8.dp))
+                }
                 Text(option.label,fontSize=16.sp,fontWeight=FontWeight.SemiBold,color=Ink)
             }
         }
@@ -600,9 +642,12 @@ private fun MelodyBuildRound(round:RoundSpec,audio:AudioEngine,disabled:Boolean,
                     Box(
                         Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)).background(if(i<entered.size)Blue.copy(alpha=.12f) else Color(0xFFEEF0F5)),
                         contentAlignment=Alignment.Center
-                    ) { Text(if(i<entered.size)noteNameUi(entered[i]) else "?",fontWeight=FontWeight.Bold,color=if(i<entered.size)Blue else Muted) }
+                    ) { Text(if(i<entered.size)noteNameUi(entered[i],round.preferFlats) else "?",fontWeight=FontWeight.Bold,color=if(i<entered.size)Blue else Muted) }
                 }
             }
+        }
+        if (entered.isNotEmpty()) {
+            StaffSnippet(entered, round.preferFlats, Modifier.fillMaxWidth().height(86.dp))
         }
         Text("Клавиатура",fontWeight=FontWeight.Bold)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
@@ -611,7 +656,7 @@ private fun MelodyBuildRound(round:RoundSpec,audio:AudioEngine,disabled:Boolean,
                     onClick={if(heard&&!disabled&&entered.size<target.size){entered=entered+midi;audio.playHomeNote(midi,null)}},
                     enabled=heard&&!disabled,contentPadding=PaddingValues(horizontal=12.dp,vertical=10.dp),shape=RoundedCornerShape(12.dp),
                     colors=ButtonDefaults.buttonColors(containerColor=if(isBlackKey(midi))Ink else Color.White,contentColor=if(isBlackKey(midi))Color.White else Ink)
-                ) { Text(noteNameUi(midi),fontSize=12.sp) }
+                ) { Text(noteNameUi(midi,round.preferFlats),fontSize=12.sp) }
             }
         }
         OutlinedButton(
@@ -669,6 +714,7 @@ private fun RhythmBuildRound(round:RoundSpec,audio:AudioEngine,disabled:Boolean,
 private fun SingingRound(round:RoundSpec,audio:AudioEngine,detector:PitchDetector,disabled:Boolean,onDone:(Double)->Unit) {
     val context=LocalContext.current
     var status by remember(round){mutableStateOf("Послушай фразу, затем повтори голосом.")}
+    var heard by remember(round){mutableStateOf(false)}
     var listening by remember(round){mutableStateOf(false)}
     var match by remember(round){mutableStateOf(false)}
     val target=round.targetMelody.firstOrNull()?:60
@@ -689,16 +735,17 @@ private fun SingingRound(round:RoundSpec,audio:AudioEngine,detector:PitchDetecto
     }
     DisposableEffect(Unit){onDispose{detector.stop()}}
     Column(verticalArrangement=Arrangement.spacedBy(9.dp)) {
-        PlayButton(round,audio)
+        PlayButton(round,audio) { heard = true }
+        if(!heard) Text("Сначала прослушай модель — затем откроются голосовые действия.",color=Muted,fontSize=13.sp)
         SurfaceCard{Text(status,color=if(match)Green else Muted,fontWeight=if(match)FontWeight.Bold else FontWeight.Normal)}
         OutlinedButton(
             onClick={
                 val granted=context.checkSelfPermission(Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED
                 if(granted)listening=!listening else launcher.launch(Manifest.permission.RECORD_AUDIO)
             },
-            enabled=!disabled,modifier=Modifier.fillMaxWidth()
+            enabled=heard&&!disabled,modifier=Modifier.fillMaxWidth()
         ){Icon(Icons.Default.Mic,null);Spacer(Modifier.width(7.dp));Text(if(listening)"Остановить помощник" else "Проверить первый звук микрофоном")}
-        Button(onClick={detector.stop();listening=false;onDone(if(match)1.0 else .68)},enabled=!disabled,modifier=Modifier.fillMaxWidth()){Text("Я спел фразу и сравнил")}
+        Button(onClick={detector.stop();listening=false;onDone(if(match)1.0 else .68)},enabled=heard&&!disabled,modifier=Modifier.fillMaxWidth()){Text("Я спел фразу и сравнил")}
         Text("Микрофон работает локально и не обязателен. Он не хранит запись и не решает за ребёнка, хорошо ли исполнена вся фраза.",color=Muted,fontSize=12.sp)
     }
 }
@@ -795,6 +842,59 @@ private fun MiniRhythm(rhythm:List<Double>,modifier:Modifier=Modifier) {
     }
 }
 
+@Composable
+private fun StaffSnippet(notes:List<Int>,preferFlats:Boolean,modifier:Modifier=Modifier) {
+    Canvas(modifier.background(Color.White, RoundedCornerShape(12.dp))) {
+        if(notes.isEmpty()) return@Canvas
+        val top = size.height * .22f
+        val gap = size.height * .12f
+        repeat(5) { line ->
+            val y = top + line * gap
+            drawLine(Color(0xFF697082), Offset(4f,y), Offset(size.width-4f,y), strokeWidth=1.5f)
+        }
+        val minMidi = 60
+        val stepX = size.width / (notes.size + 1)
+        notes.forEachIndexed { index, midi ->
+            val diatonic = diatonicStaffStep(midi,preferFlats)
+            val y = top + 4*gap - diatonic * (gap/2f)
+            val x = stepX * (index + 1)
+            drawOval(
+                color=Ink,
+                topLeft=Offset(x-7f,y-5f),
+                size=androidx.compose.ui.geometry.Size(14f,10f)
+            )
+            drawLine(Ink,Offset(x+6f,y),Offset(x+6f,y-24f),strokeWidth=2f)
+            if (y > top + 4*gap + 2f) {
+                var ly = top + 5*gap
+                while (ly <= y + 2f) {
+                    drawLine(Color(0xFF697082),Offset(x-12f,ly),Offset(x+12f,ly),strokeWidth=1.3f)
+                    ly += gap
+                }
+            }
+            if (y < top - 2f) {
+                var ly = top - gap
+                while (ly >= y - 2f) {
+                    drawLine(Color(0xFF697082),Offset(x-12f,ly),Offset(x+12f,ly),strokeWidth=1.3f)
+                    ly -= gap
+                }
+            }
+        }
+    }
+}
+
+private fun diatonicStaffStep(midi:Int,preferFlats:Boolean):Int {
+    val pc=Math.floorMod(midi,12)
+    val octave=midi/12-1
+    val letterIndex=if(preferFlats){
+        when(pc){0->0;1->1;2->1;3->2;4->2;5->3;6->4;7->4;8->5;9->5;10->6;else->6}
+    }else{
+        when(pc){0,1->0;2,3->1;4->2;5,6->3;7,8->4;9,10->5;else->6}
+    }
+    val absolute=octave*7+letterIndex
+    val c4Absolute=4*7
+    return absolute-c4Absolute
+}
+
 private fun challengeIconByType(type:ChallengeType)=when(type){
     ChallengeType.LISTEN_CHOICE->Icons.Default.Hearing
     ChallengeType.RHYTHM_CHOICE->Icons.Default.GraphicEq
@@ -829,9 +929,10 @@ private fun smartLessonForSkill(skill:SkillTag,completed:Int):Int{
     val week=weeks.filter{it<=maxWeek}.maxOrNull()?:1
     return (((week-1)*7)+7).coerceIn(1,completed)
 }
-private fun noteNameUi(midi:Int):String{
-    val n=listOf("до","до♯","ре","ре♯","ми","фа","фа♯","соль","соль♯","ля","ля♯","си")
-    return n[Math.floorMod(midi,12)]
+private fun noteNameUi(midi:Int,preferFlats:Boolean=false):String{
+    val sharp=listOf("до","до♯","ре","ре♯","ми","фа","фа♯","соль","соль♯","ля","ля♯","си")
+    val flat=listOf("до","ре♭","ре","ми♭","ми","фа","соль♭","соль","ля♭","ля","си♭","си")
+    return (if(preferFlats)flat else sharp)[Math.floorMod(midi,12)]
 }
 private fun isBlackKey(midi:Int)=Math.floorMod(midi,12) in setOf(1,3,6,8,10)
 private fun durationLabel(d:Double)=when{d>=1.9->"𝅗𝅥 2";d>=.9->"♩ 1";d>=.49->"♪ ½";else->"♬ ¼"}
