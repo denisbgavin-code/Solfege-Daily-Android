@@ -1451,7 +1451,7 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
             pitchStatus.setTextColor(TEXT);
         }
 
-        pitchDetector.start(targetMidi, new PitchDetector.Listener() {
+        pitchDetector.start(this, targetMidi, new PitchDetector.Listener() {
             @Override
             public void onLevel(double rms) {
                 if (pitchLevel != null) pitchLevel.setProgress((int) Math.round(rms * 100));
