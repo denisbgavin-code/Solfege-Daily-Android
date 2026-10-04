@@ -93,6 +93,54 @@ class QuestEngineTest {
     }
 
     @Test
+    fun resumeCursorAlsoPreservesEarnedStars() {
+        val store = ProgressStore(prefs())
+        store.saveMissionCursor(4, 3, 5)
+
+        assertEquals(3, store.missionCursor(4))
+        assertEquals(5, store.missionStars(4))
+        assertEquals(0, store.missionCursor(5))
+        assertEquals(0, store.missionStars(5))
+
+        store.clearCursor()
+        assertEquals(0, store.missionCursor(4))
+        assertEquals(0, store.missionStars(4))
+    }
+
+    @Test
+    fun earlyCourseDoesNotRequireNoteNamesBeforeNotationIsIntroduced() {
+        val store = ProgressStore(prefs())
+        for (week in 1..5) {
+            val mission = MissionFactory.create((week - 1) * 7 + 1, store)
+            val reading = mission.challenges[2]
+            assertEquals(ChallengeType.NOTE_CHOICE, reading.type)
+            reading.rounds.forEach { round ->
+                assertTrue(round.options.all { it.id in setOf("up", "same", "down") })
+            }
+        }
+
+        for (week in 6..8) {
+            val mission = MissionFactory.create((week - 1) * 7 + 1, store)
+            val reading = mission.challenges[2]
+            reading.rounds.forEach { round ->
+                assertTrue(round.options.all { it.label.contains("ступень") })
+                assertTrue(round.options.any { it.id == round.correctOptionId })
+            }
+        }
+    }
+
+    @Test
+    fun flatKeysUseFlatSpellingInNotationChoices() {
+        val store = ProgressStore(prefs())
+        for (week in listOf(17, 31, 32)) {
+            val mission = MissionFactory.create((week - 1) * 7 + 1, store)
+            val reading = mission.challenges[2]
+            assertTrue(reading.rounds.all { it.preferFlats })
+            assertTrue(reading.rounds.flatMap { it.options }.none { it.label.contains("ля♯") })
+        }
+    }
+
+    @Test
     fun completingMissionUnlocksNextDay() {
         val store = ProgressStore(prefs())
         assertEquals(1, store.currentLesson())
