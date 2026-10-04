@@ -24,6 +24,7 @@ data class RoundSpec(
     val rhythmA: List<Double> = emptyList(),
     val rhythmB: List<Double> = emptyList(),
     val meter: Int = 0,
+    val preferFlats: Boolean = false,
     val options: List<AnswerOption> = emptyList(),
     val correctOptionId: String? = null,
     val targetMelody: List<Int> = emptyList(),
@@ -116,7 +117,12 @@ class ProgressStore(private val prefs: SharedPreferences) {
             .apply()
     }
 
-    fun weakestSkill(): SkillTag = SkillTag.entries.minByOrNull { skillState(it).score } ?: SkillTag.PITCH
+    fun hasAnySkillData(): Boolean = SkillTag.entries.any { skillState(it).attempts > 0 }
+
+    fun weakestSkill(): SkillTag {
+        val observed = SkillTag.entries.filter { skillState(it).attempts > 0 }
+        return (if (observed.isEmpty()) SkillTag.PULSE else observed.minByOrNull { skillState(it).score }) ?: SkillTag.PULSE
+    }
 
     fun resetAll() {
         val editor = prefs.edit()
@@ -316,20 +322,81 @@ object MissionFactory {
     }
 
     private fun makeReadingChallenge(lessonId:Int,week:Int,day:Int,random:Random,store:ProgressStore):ChallengeSpec{
-        val skill=if(week>=15)SkillTag.KEYS else SkillTag.READING
-        val d=difficulty(store,skill)
-        val rounds=(0 until 4).map{idx->
-            val target=melodyFor(week,day+idx,d)
-            val note=target[(idx+day)%target.size]
-            val candidates=nearbyMidi(note,d)
-            RoundSpec(
-                "Какую ноту ты услышал?","Сначала услышь, затем выбери имя.",audioA=listOf(note),
-                options=candidates.map{midi->AnswerOption(midi.toString(),noteName(midi),listOf(midi))}.shuffled(random),
-                correctOptionId=note.toString(),hint="Ошибка чаще всего рядом: сравни соседние ноты.",
-                explanation="Это " + noteName(note) + ".",skill=skill,difficulty=d
-            )
+        val skill = when {
+            week < 6 -> SkillTag.PITCH
+            week < 9 -> SkillTag.TONALITY
+            week >= 15 -> SkillTag.KEYS
+            else -> SkillTag.READING
         }
-        return ChallengeSpec("reading-$lessonId",if(week<9)"Карта высоты" else "Нотный навигатор","Услышать → назвать → увидеть.",ChallengeType.NOTE_CHOICE,rounds,3,2,skill)
+        val d=difficulty(store,skill)
+        val preferFlats = week == 17 || week in 31..32
+
+        val rounds=(0 until 4).map{idx->
+            when {
+                week < 6 -> {
+                    val first = 60 + ((day + idx) % 3) * 2
+                    val motion = listOf(-2, 0, 2)[(day + idx) % 3]
+                    val second = first + motion
+                    val correct = when { motion > 0 -> "up"; motion < 0 -> "down"; else -> "same" }
+                    RoundSpec(
+                        prompt="Какая карта подходит к движению двух звуков?",
+                        instruction="Сначала послушай. Нотных названий пока не нужно — следи только за направлением.",
+                        audioA=listOf(first,second),
+                        options=listOf(
+                            AnswerOption("up","↗ вверх"),
+                            AnswerOption("same","→ на месте"),
+                            AnswerOption("down","↘ вниз")
+                        ).shuffled(random),
+                        correctOptionId=correct,
+                        hint="Представь, что второй звук стоит этажом выше, ниже или на том же месте.",
+                        explanation=when(correct){"up"->"Второй звук поднялся.";"down"->"Второй звук опустился.";else->"Высота осталась той же."},
+                        skill=skill,difficulty=d
+                    )
+                }
+                week < 9 -> {
+                    val degrees = listOf(0,2,4,5,7)
+                    val degreeIndex = (day + idx) % degrees.size
+                    val midi = 60 + degrees[degreeIndex]
+                    val degreeNumber = degreeIndex + 1
+                    val candidates = listOf(1,2,3,4,5)
+                        .filter { d == 2 || abs(it - degreeNumber) <= 2 }
+                        .distinct()
+                        .take(if(d==0) 2 else if(d==1) 3 else 5)
+                    RoundSpec(
+                        prompt="Какая ступень прозвучала после опоры До–Ми–Соль?",
+                        instruction="Сначала услышишь ладовую опору, затем один звук для ответа.",
+                        audioA=listOf(60,64,67,midi),
+                        options=candidates.map{n->AnswerOption("deg$n","$n ступень")}.shuffled(random),
+                        correctOptionId="deg$degreeNumber",
+                        hint="Сначала почувствуй До как дом. Затем считай соседние ступени вверх.",
+                        explanation="Это $degreeNumber ступень относительно До.",
+                        skill=skill,difficulty=d
+                    )
+                }
+                else -> {
+                    val target=melodyFor(week,day+idx,d)
+                    val note=target[(idx+day)%target.size]
+                    val candidates=nearbyMidi(note,d)
+                    RoundSpec(
+                        prompt="Какую ноту ты услышал?",
+                        instruction="Сначала услышь, затем выбери имя и положение на нотном стане.",
+                        audioA=listOf(note),
+                        preferFlats=preferFlats,
+                        options=candidates.map{midi->AnswerOption(midi.toString(),noteName(midi,preferFlats),listOf(midi))}.shuffled(random),
+                        correctOptionId=note.toString(),
+                        hint="Сравни с соседними звуками. На стане каждый шаг меняет положение ноты.",
+                        explanation="Это " + noteName(note,preferFlats) + ".",
+                        skill=skill,difficulty=d
+                    )
+                }
+            }
+        }
+        return ChallengeSpec(
+            "reading-$lessonId",
+            when { week < 6 -> "Карта высоты"; week < 9 -> "Ступени лада"; else -> "Нотный навигатор" },
+            when { week < 9 -> "Сначала слух и функция — запись появится позже."; else -> "Услышать → назвать → увидеть." },
+            ChallengeType.NOTE_CHOICE,rounds,3,2,skill
+        )
     }
 
     private fun makeBuildChallenge(lessonId:Int,week:Int,day:Int,random:Random,store:ProgressStore):ChallengeSpec{
@@ -347,7 +414,7 @@ object MissionFactory {
             }else{
                 val target=melodyFor(week,day+idx,d).take(if(d==0)3 else if(d==1)4 else 5)
                 RoundSpec(
-                    "Собери мелодию по слуху.","Нажимай ноты на клавиатуре. Проверка запускается отдельно.",audioA=target,targetMelody=target,
+                    "Собери мелодию по слуху.","Нажимай ноты на клавиатуре. Проверка запускается отдельно.",audioA=target,targetMelody=target,preferFlats=(week==17 || week in 31..32),
                     hint="Сначала пой фразу на «лу», затем ищи ноты по одной.",
                     explanation="После проверки послушай эталон и свой порядок ещё раз.",skill=skill,difficulty=d
                 )
@@ -427,9 +494,10 @@ object MissionFactory {
         val offsets=when(d){0->listOf(0,2);2->listOf(-2,-1,0,1,2);else->listOf(-2,0,2)}
         return offsets.map{target+it}.distinct()
     }
-    private fun noteName(midi:Int):String{
-        val names=listOf("до","до♯","ре","ре♯","ми","фа","фа♯","соль","соль♯","ля","ля♯","си")
-        return names[midi.mod(12)]
+    private fun noteName(midi:Int, preferFlats:Boolean=false):String{
+        val sharpNames=listOf("до","до♯","ре","ре♯","ми","фа","фа♯","соль","соль♯","ля","ля♯","си")
+        val flatNames=listOf("до","ре♭","ре","ми♭","ми","фа","соль♭","соль","ля♭","ля","си♭","си")
+        return (if(preferFlats) flatNames else sharpNames)[midi.mod(12)]
     }
     private fun scaleForKey(key:String):List<Int>{
         val root=when(key){"Соль мажор"->67;"Фа мажор"->65;"Ре мажор"->62;"Си-бемоль мажор"->70;else->60}
