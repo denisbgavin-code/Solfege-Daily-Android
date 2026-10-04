@@ -3,6 +3,7 @@ package ru.solfege.daily
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.speech.tts.TextToSpeech
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -35,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import java.util.Locale
 
 private val Ink = Color(0xFF182033)
 private val Muted = Color(0xFF6D7484)
@@ -135,6 +137,7 @@ private fun HomeScreen(store: ProgressStore, refresh: Int, onStart: (Int) -> Uni
     val current = store.currentLesson()
     val mission = MissionFactory.create(current, store)
     val completed = store.completedLesson
+    val courseComplete = completed >= 238
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -145,7 +148,13 @@ private fun HomeScreen(store: ProgressStore, refresh: Int, onStart: (Int) -> Uni
             Text("Музыкальная экспедиция", fontSize = 29.sp, fontWeight = FontWeight.ExtraBold, color = Ink)
             Text("Сольфеджио как серия настоящих музыкальных задач", color = Muted, fontSize = 14.sp)
         }
-        item { HeroMissionCard(mission, completed, store.stars, onStart) }
+        item {
+            if (courseComplete) {
+                CourseCompleteCard(store.stars) { onStart(238) }
+            } else {
+                HeroMissionCard(mission, completed, store.stars, onStart)
+            }
+        }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 QuickCard(Modifier.weight(1f), Icons.Default.Map, "Маршрут", "34 недели", Cyan, onMap)
@@ -469,6 +478,7 @@ private fun ChallengeRunner(
     var roundFinished by remember(challenge.id, roundIndex) { mutableStateOf(false) }
     var answered by remember(challenge.id, roundIndex) { mutableStateOf(setOf<String>()) }
     val round = challenge.rounds[roundIndex]
+    val narrate = rememberNarrator()
 
     fun finishRound(result: Double, wasCorrect: Boolean, message: String) {
         store.recordSkill(round.skill, result, missionId)
@@ -510,9 +520,16 @@ private fun ChallengeRunner(
         }
         item {
             SurfaceCard {
-                Text(round.prompt,fontSize=21.sp,fontWeight=FontWeight.Bold)
-                Spacer(Modifier.height(6.dp))
-                Text(round.instruction,color=Muted,lineHeight=20.sp)
+                Row(verticalAlignment = Alignment.Top) {
+                    Column(Modifier.weight(1f)) {
+                        Text(round.prompt,fontSize=21.sp,fontWeight=FontWeight.Bold)
+                        Spacer(Modifier.height(6.dp))
+                        Text(round.instruction,color=Muted,lineHeight=20.sp)
+                    }
+                    IconButton(onClick={narrate(round.prompt+". "+round.instruction)}) {
+                        Icon(Icons.Default.RecordVoiceOver,"Прочитать задание",tint=Blue)
+                    }
+                }
             }
         }
         item {
@@ -797,6 +814,62 @@ private fun MissionCompleteScreen(mission:MissionSpec,stars:Int,practiceMode:Boo
             Spacer(Modifier.height(22.dp))
             Button(onClick=onContinue,colors=ButtonDefaults.buttonColors(containerColor=Color.White,contentColor=Blue),modifier=Modifier.fillMaxWidth().height(55.dp),shape=RoundedCornerShape(18.dp)){Text(if(practiceMode)"Вернуться домой" else "Открыть следующий день",fontWeight=FontWeight.Bold)}
         }
+    }
+}
+
+@Composable
+private fun CourseCompleteCard(stars:Int,onReplay:()->Unit) {
+    Card(
+        shape=RoundedCornerShape(28.dp),
+        colors=CardDefaults.cardColors(containerColor=Color.Transparent)
+    ) {
+        Column(
+            Modifier
+                .background(Brush.linearGradient(listOf(Color(0xFF6B304B),Color(0xFF9D466F),Color(0xFFD05C78))))
+                .padding(22.dp)
+        ) {
+            Text("🏆",fontSize=44.sp)
+            Spacer(Modifier.height(8.dp))
+            Text("Экспедиция завершена",color=Color.White,fontSize=27.sp,fontWeight=FontWeight.ExtraBold)
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "Пройдены все 238 миссий. Теперь приложение может использоваться как тренажёр: повторяй слабые навыки и возвращайся к любому открытому миру.",
+                color=Color.White.copy(alpha=.9f),
+                lineHeight=21.sp
+            )
+            Spacer(Modifier.height(14.dp))
+            Text("★ "+stars,color=Color.White,fontWeight=FontWeight.Bold,fontSize=18.sp)
+            Spacer(Modifier.height(14.dp))
+            Button(
+                onClick=onReplay,
+                colors=ButtonDefaults.buttonColors(containerColor=Color.White,contentColor=Color(0xFF8E3E64)),
+                modifier=Modifier.fillMaxWidth().height(52.dp),
+                shape=RoundedCornerShape(17.dp)
+            ){Text("Повторить финальную миссию",fontWeight=FontWeight.Bold)}
+        }
+    }
+}
+
+@Composable
+private fun rememberNarrator():(String)->Unit {
+    val context=LocalContext.current
+    var engine by remember { mutableStateOf<TextToSpeech?>(null) }
+    DisposableEffect(context) {
+        val tts=TextToSpeech(context.applicationContext) { status ->
+            if(status==TextToSpeech.SUCCESS) {
+                engine?.language=Locale("ru","RU")
+                engine?.setSpeechRate(.92f)
+            }
+        }
+        engine=tts
+        onDispose {
+            tts.stop()
+            tts.shutdown()
+            engine=null
+        }
+    }
+    return { text ->
+        engine?.speak(text,TextToSpeech.QUEUE_FLUSH,null,"solfege-instruction")
     }
 }
 
