@@ -84,15 +84,26 @@ class ProgressStore(private val prefs: SharedPreferences) {
             .apply()
     }
 
-    fun saveMissionCursor(lessonId: Int, challenge: Int) {
-        prefs.edit().putInt("quest_cursor_lesson", lessonId).putInt("quest_cursor_challenge", challenge).apply()
+    fun saveMissionCursor(lessonId: Int, challenge: Int, earnedStars: Int) {
+        prefs.edit()
+            .putInt("quest_cursor_lesson", lessonId)
+            .putInt("quest_cursor_challenge", challenge)
+            .putInt("quest_cursor_stars", earnedStars)
+            .apply()
     }
 
     fun missionCursor(lessonId: Int): Int =
         if (prefs.getInt("quest_cursor_lesson", -1) == lessonId) prefs.getInt("quest_cursor_challenge", 0) else 0
 
+    fun missionStars(lessonId: Int): Int =
+        if (prefs.getInt("quest_cursor_lesson", -1) == lessonId) prefs.getInt("quest_cursor_stars", 0) else 0
+
     fun clearCursor() {
-        prefs.edit().remove("quest_cursor_lesson").remove("quest_cursor_challenge").apply()
+        prefs.edit()
+            .remove("quest_cursor_lesson")
+            .remove("quest_cursor_challenge")
+            .remove("quest_cursor_stars")
+            .apply()
     }
 
     fun skillState(skill: SkillTag): SkillState {
