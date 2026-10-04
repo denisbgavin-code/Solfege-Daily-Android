@@ -1,10 +1,16 @@
 package ru.solfege.daily;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.content.Context;
+import android.content.pm.PackageManager;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Handler;
 import android.os.Looper;
+
+import androidx.core.content.ContextCompat;
 
 public final class PitchDetector {
     public interface Listener {
@@ -21,9 +27,20 @@ public final class PitchDetector {
     private Thread worker;
     private AudioRecord recorder;
 
-    public synchronized void start(int targetMidi, Listener listener) {
+    public synchronized void start(Context context, int targetMidi, Listener listener) {
         stop();
 
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            postError(listener, "Нет разрешения на микрофон.");
+            return;
+        }
+
+        startWithPermission(targetMidi, listener);
+    }
+
+    @SuppressLint("MissingPermission")
+    private synchronized void startWithPermission(int targetMidi, Listener listener) {
         int min = AudioRecord.getMinBufferSize(
                 SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO,
@@ -82,6 +99,7 @@ public final class PitchDetector {
         }
     }
 
+    @SuppressLint("MissingPermission")
     private void runDetector(int targetMidi, Listener listener) {
         AudioRecord r = recorder;
         if (r == null) return;
